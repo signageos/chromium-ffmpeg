@@ -92,6 +92,7 @@
  *     compressed data in an AVPacket.
  *   - For encoding, call avcodec_send_frame() to give the encoder an AVFrame
  *     containing uncompressed audio or video.
+ *
  *   In both cases, it is recommended that AVPackets and AVFrames are
  *   refcounted, or libavcodec might have to copy the input data. (libavformat
  *   always returns refcounted AVPackets, and av_frame_get_buffer() allocates
@@ -102,6 +103,7 @@
  *     an AVFrame containing uncompressed audio or video data.
  *   - For encoding, call avcodec_receive_packet(). On success, it will return
  *     an AVPacket with a compressed frame.
+ *
  *   Repeat this call until it returns AVERROR(EAGAIN) or an error. The
  *   AVERROR(EAGAIN) return value means that new input data is required to
  *   return new output. In this case, continue with sending input. For each
@@ -549,6 +551,8 @@ enum AVCodecID {
     AV_CODEC_ID_ADPCM_ARGO,
     AV_CODEC_ID_ADPCM_IMA_SSI,
     AV_CODEC_ID_ADPCM_ZORK,
+    AV_CODEC_ID_ADPCM_IMA_APM,
+    AV_CODEC_ID_ADPCM_IMA_ALP,
 
     /* AMR */
     AV_CODEC_ID_AMR_NB = 0x12000,
@@ -661,6 +665,7 @@ enum AVCodecID {
     AV_CODEC_ID_HCOM,
     AV_CODEC_ID_ACELP_KELVIN,
     AV_CODEC_ID_MPEGH_3D_AUDIO,
+    AV_CODEC_ID_SIREN,
 
     /* subtitle codecs */
     AV_CODEC_ID_FIRST_SUBTITLE = 0x17000,          ///< A dummy ID pointing at the start of subtitle codecs.
@@ -1101,6 +1106,18 @@ typedef struct RcOverride{
  */
 #define AV_CODEC_CAP_ENCODER_REORDERED_OPAQUE (1 << 20)
 
+/* Exported side data.
+   These flags can be passed in AVCodecContext.export_side_data before initialization.
+*/
+/**
+ * Export motion vectors through frame side data
+ */
+#define AV_CODEC_EXPORT_DATA_MVS         (1 << 0)
+/**
+ * Export encoder Producer Reference Time through packet side data
+ */
+#define AV_CODEC_EXPORT_DATA_PRFT        (1 << 1)
+
 /**
  * Pan Scan area.
  * This specifies the area which should be displayed.
@@ -1180,7 +1197,15 @@ typedef struct AVCPBProperties {
     uint64_t vbv_delay;
 } AVCPBProperties;
 
+/**
+ * This structure supplies correlation between a packet timestamp and a wall clock
+ * production time. The definition follows the Producer Reference Time ('prft')
+ * as defined in ISO/IEC 14496-12
+ */
 typedef struct AVProducerReferenceTime {
+    /**
+     * A UTC timestamp, in microseconds, since Unix epoch (e.g, av_gettime()).
+     */
     int64_t wallclock;
     int flags;
 } AVProducerReferenceTime;
@@ -1420,9 +1445,17 @@ enum AVPacketSideDataType {
     AV_PKT_DATA_AFD,
 
     /**
-     * Producer Reference Time data corresponding to the AVProducerReferenceTime struct.
+     * Producer Reference Time data corresponding to the AVProducerReferenceTime struct,
+     * usually exported by some encoders (on demand through the prft flag set in the
+     * AVCodecContext export_side_data field).
      */
     AV_PKT_DATA_PRFT,
+
+    /**
+     * ICC profile data consisting of an opaque octet buffer following the
+     * format described by ISO 15076-1.
+     */
+    AV_PKT_DATA_ICC_PROFILE,
 
     /**
      * The number of side data types.
@@ -3398,6 +3431,16 @@ typedef struct AVCodecContext {
      * - encoding: set by user
      */
     int64_t max_samples;
+
+    /**
+     * Bit set of AV_CODEC_EXPORT_DATA_* flags, which affects the kind of
+     * metadata exported in frame, packet, or coded stream side data by
+     * decoders and encoders.
+     *
+     * - decoding: set by user
+     * - encoding: set by user
+     */
+    int export_side_data;
 } AVCodecContext;
 
 #if FF_API_CODEC_GET_SET

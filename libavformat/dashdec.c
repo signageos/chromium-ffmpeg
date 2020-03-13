@@ -2361,7 +2361,8 @@ static int dash_probe(const AVProbeData *p)
     if (av_stristr(p->buf, "dash:profile:isoff-on-demand:2011") ||
         av_stristr(p->buf, "dash:profile:isoff-live:2011") ||
         av_stristr(p->buf, "dash:profile:isoff-live:2012") ||
-        av_stristr(p->buf, "dash:profile:isoff-main:2011")) {
+        av_stristr(p->buf, "dash:profile:isoff-main:2011") ||
+        av_stristr(p->buf, "3GPP:PSS:profile:DASH1")) {
         return AVPROBE_SCORE_MAX;
     }
     if (av_stristr(p->buf, "dash:profile")) {
@@ -2376,7 +2377,7 @@ static int dash_probe(const AVProbeData *p)
 static const AVOption dash_options[] = {
     {"allowed_extensions", "List of file extensions that dash is allowed to access",
         OFFSET(allowed_extensions), AV_OPT_TYPE_STRING,
-        {.str = "aac,m4a,m4s,m4v,mov,mp4,webm"},
+        {.str = "aac,m4a,m4s,m4v,mov,mp4,webm,ts"},
         INT_MIN, INT_MAX, FLAGS},
     {NULL}
 };

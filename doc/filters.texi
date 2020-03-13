@@ -6608,7 +6608,8 @@ The threshold below which a pixel value is considered black; it defaults to
 
 @end table
 
-@section blend, tblend
+@anchor{blend}
+@section blend
 
 Blend two video frames into each other.
 
@@ -6994,6 +6995,21 @@ Only deinterlace frames marked as interlaced.
 @end table
 
 The default value is @code{all}.
+@end table
+
+@section cas
+
+Apply Contrast Adaptive Sharpen filter to video stream.
+
+The filter accepts the following options:
+
+@table @option
+@item strength
+Set the sharpening strength. Default value is 0.
+
+@item planes
+Set planes to filter. Default value is to filter all
+planes except alpha plane.
 @end table
 
 @section chromahold
@@ -9140,6 +9156,7 @@ ffmpeg -i INPUT -f lavfi -i nullsrc=hd720,geq='r=128+80*(sin(sqrt((X-W/2)*(X-W/2
 @end example
 @end itemize
 
+@anchor{dnn_processing}
 @section dnn_processing
 
 Do image processing with deep neural networks. It works together with another filter
@@ -9180,6 +9197,8 @@ Set the output name of the dnn network.
 
 @end table
 
+@subsection Examples
+
 @itemize
 @item
 Halve the red channle of the frame with format rgb24:
@@ -9191,6 +9210,18 @@ ffmpeg -i input.jpg -vf format=rgb24,dnn_processing=model=halve_first_channel.mo
 Halve the pixel value of the frame with format gray32f:
 @example
 ffmpeg -i input.jpg -vf format=grayf32,dnn_processing=model=halve_gray_float.model:input=dnn_in:output=dnn_out:dnn_backend=native -y out.native.png
+@end example
+
+@item
+Handle the Y channel with srcnn.pb (see @ref{sr} filter) for frame with yuv420p (planar YUV formats supported):
+@example
+./ffmpeg -i 480p.jpg -vf format=yuv420p,scale=w=iw*2:h=ih*2,dnn_processing=dnn_backend=tensorflow:model=srcnn.pb:input=x:output=y -y srcnn.jpg
+@end example
+
+@item
+Handle the Y channel with espcn.pb (see @ref{sr} filter), which changes frame size, for format yuv420p (planar YUV formats supported):
+@example
+./ffmpeg -i 480p.jpg -vf format=yuv420p,dnn_processing=dnn_backend=tensorflow:model=espcn.pb:input=x:output=y -y tmp.espcn.jpg
 @end example
 
 @end itemize
@@ -12226,6 +12257,8 @@ this value filter algorithm for connecting components is activated.
 By default value is 0.
 @end table
 
+The @code{hysteresis} filter also supports the @ref{framesync} options.
+
 @section idet
 
 Detect video interlacing type.
@@ -13077,6 +13110,8 @@ set fourth pixel component expression, corresponds to the alpha component
 set output bit depth, only available for @code{lut2} filter. By default is 0,
 which means bit depth is automatically picked from first input format.
 @end table
+
+The @code{lut2} filter also supports the @ref{framesync} options.
 
 Each of them specifies the expression to use for computing the lookup table for
 the corresponding pixel component values.
@@ -17291,6 +17326,7 @@ Set quality level. The value @code{max} can be used to set the maximum level,
 currently @code{6}.
 @end table
 
+@anchor{sr}
 @section sr
 
 Scale the input by applying one of the super-resolution methods based on
@@ -17344,6 +17380,8 @@ Set scale factor for SRCNN model. Allowed values are @code{2}, @code{3} and @cod
 Default value is @code{2}. Scale factor is necessary for SRCNN model, because it accepts
 input upscaled using bicubic upscaling with proper scale factor.
 @end table
+
+This feature can also be finished with @ref{dnn_processing} filter.
 
 @section ssim
 
@@ -17801,6 +17839,11 @@ the position in the file of the input frame, NAN if unknown
 
 @section swapuv
 Swap U & V plane.
+
+@section tblend
+Blend successive video frames.
+
+See @ref{blend}
 
 @section telecine
 
@@ -18911,7 +18954,8 @@ Default value is @b{@samp{0}}.
 
 @item barrel
 @item fb
-Facebook's 360 format.
+@item barrelsplit
+Facebook's 360 formats.
 
 @item sg
 Stereographic format.
@@ -19005,6 +19049,13 @@ Set perspective parameter.
 
 @item tetrahedron
 Tetrahedron projection.
+
+@item tsp
+Truncated square pyramid projection.
+
+@item he
+@item hequirect
+Half equirectangular projection.
 @end table
 
 @item interp
@@ -19114,6 +19165,10 @@ Convert transposed and horizontally flipped Equi-Angular Cubemap in side-by-side
 v360=eac:equirect:in_stereo=sbs:in_trans=1:ih_flip=1:out_stereo=tb
 @end example
 @end itemize
+
+@subsection Commands
+
+This filter supports subset of above options as @ref{commands}.
 
 @section vaguedenoiser
 
@@ -21303,6 +21358,8 @@ Number of inputs to the filter.  Defaults to 1.
 Size of output frames.  Defaults to the same as the first input.
 
 @end table
+
+The @code{program_opencl} filter also supports the @ref{framesync} options.
 
 The program source file must contain a kernel function with the given name,
 which will be run once for each plane of the output.  Each run on a plane
@@ -23633,6 +23690,38 @@ The command is sent when the current frame timestamp leaves the
 specified interval. In other words, the command is sent when the
 previous frame timestamp was in the given interval, and the
 current is not.
+
+@item expr
+The command @var{ARG} is interpreted as expression and result of
+expression is passed as @var{ARG}.
+
+The expression is evaluated through the eval API and can contain the following
+constants:
+
+@table @option
+@item POS
+Original position in the file of the frame, or undefined if undefined
+for the current frame.
+
+@item PTS
+The presentation timestamp in input.
+
+@item N
+The count of the input frame for video or audio, starting from 0.
+
+@item T
+The time in seconds of the current frame.
+
+@item TS
+The start time in seconds of the current command interval.
+
+@item TE
+The end time in seconds of the current command interval.
+
+@item TI
+The interpolated time of the current command interval, TI = (T - TS) / (TE - TS).
+@end table
+
 @end table
 
 If @var{FLAGS} is not specified, a default value of @code{[enter]} is

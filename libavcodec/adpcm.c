@@ -14,6 +14,8 @@
  * THP ADPCM decoder by Marco Gerards (mgerards@xs4all.nl)
  * Argonaut Games ADPCM decoder by Zane van Iperen (zane@zanevaniperen.com)
  * Simon & Schuster Interactive ADPCM decoder by Zane van Iperen (zane@zanevaniperen.com)
+ * Ubisoft ADPCM decoder by Zane van Iperen (zane@zanevaniperen.com)
+ * High Voltage Software ALP decoder by Zane van Iperen (zane@zanevaniperen.com)
  *
  * This file is part of FFmpeg.
  *
@@ -150,6 +152,14 @@ static av_cold int adpcm_decode_init(AVCodecContext * avctx)
             c->status[1].predictor = av_clip_intp2(AV_RL32(avctx->extradata + 4), 18);
         }
         break;
+    case AV_CODEC_ID_ADPCM_IMA_APM:
+        if (avctx->extradata && avctx->extradata_size >= 16) {
+            c->status[0].predictor  = AV_RL32(avctx->extradata +  0);
+            c->status[0].step_index = av_clip(AV_RL32(avctx->extradata +  4), 0, 88);
+            c->status[1].predictor  = AV_RL32(avctx->extradata +  8);
+            c->status[1].step_index = av_clip(AV_RL32(avctx->extradata + 12), 0, 88);
+        }
+        break;
     case AV_CODEC_ID_ADPCM_IMA_WS:
         if (avctx->extradata && avctx->extradata_size >= 2)
             c->vqa_version = AV_RL16(avctx->extradata);
@@ -166,36 +176,36 @@ static av_cold int adpcm_decode_init(AVCodecContext * avctx)
         break;
     }
 
-    switch(avctx->codec->id) {
-        case AV_CODEC_ID_ADPCM_AICA:
-        case AV_CODEC_ID_ADPCM_IMA_DAT4:
-        case AV_CODEC_ID_ADPCM_IMA_QT:
-        case AV_CODEC_ID_ADPCM_IMA_WAV:
-        case AV_CODEC_ID_ADPCM_4XM:
-        case AV_CODEC_ID_ADPCM_XA:
-        case AV_CODEC_ID_ADPCM_EA_R1:
-        case AV_CODEC_ID_ADPCM_EA_R2:
-        case AV_CODEC_ID_ADPCM_EA_R3:
-        case AV_CODEC_ID_ADPCM_EA_XAS:
-        case AV_CODEC_ID_ADPCM_THP:
-        case AV_CODEC_ID_ADPCM_THP_LE:
-        case AV_CODEC_ID_ADPCM_AFC:
-        case AV_CODEC_ID_ADPCM_DTK:
-        case AV_CODEC_ID_ADPCM_PSX:
-        case AV_CODEC_ID_ADPCM_MTAF:
-        case AV_CODEC_ID_ADPCM_ARGO:
-            avctx->sample_fmt = AV_SAMPLE_FMT_S16P;
-            break;
-        case AV_CODEC_ID_ADPCM_IMA_WS:
-            avctx->sample_fmt = c->vqa_version == 3 ? AV_SAMPLE_FMT_S16P :
-                                                      AV_SAMPLE_FMT_S16;
-            break;
-        case AV_CODEC_ID_ADPCM_MS:
-            avctx->sample_fmt = avctx->channels > 2 ? AV_SAMPLE_FMT_S16P :
-                                                      AV_SAMPLE_FMT_S16;
-            break;
-        default:
-            avctx->sample_fmt = AV_SAMPLE_FMT_S16;
+    switch (avctx->codec->id) {
+    case AV_CODEC_ID_ADPCM_AICA:
+    case AV_CODEC_ID_ADPCM_IMA_DAT4:
+    case AV_CODEC_ID_ADPCM_IMA_QT:
+    case AV_CODEC_ID_ADPCM_IMA_WAV:
+    case AV_CODEC_ID_ADPCM_4XM:
+    case AV_CODEC_ID_ADPCM_XA:
+    case AV_CODEC_ID_ADPCM_EA_R1:
+    case AV_CODEC_ID_ADPCM_EA_R2:
+    case AV_CODEC_ID_ADPCM_EA_R3:
+    case AV_CODEC_ID_ADPCM_EA_XAS:
+    case AV_CODEC_ID_ADPCM_THP:
+    case AV_CODEC_ID_ADPCM_THP_LE:
+    case AV_CODEC_ID_ADPCM_AFC:
+    case AV_CODEC_ID_ADPCM_DTK:
+    case AV_CODEC_ID_ADPCM_PSX:
+    case AV_CODEC_ID_ADPCM_MTAF:
+    case AV_CODEC_ID_ADPCM_ARGO:
+        avctx->sample_fmt = AV_SAMPLE_FMT_S16P;
+        break;
+    case AV_CODEC_ID_ADPCM_IMA_WS:
+        avctx->sample_fmt = c->vqa_version == 3 ? AV_SAMPLE_FMT_S16P :
+                                                  AV_SAMPLE_FMT_S16;
+        break;
+    case AV_CODEC_ID_ADPCM_MS:
+        avctx->sample_fmt = avctx->channels > 2 ? AV_SAMPLE_FMT_S16P :
+                                                  AV_SAMPLE_FMT_S16;
+        break;
+    default:
+        avctx->sample_fmt = AV_SAMPLE_FMT_S16;
     }
 
     return 0;
@@ -261,6 +271,29 @@ static inline int16_t adpcm_ima_expand_nibble(ADPCMChannelStatus *c, int8_t nibb
      * the reference ADPCM implementation since modern CPUs can do the mults
      * quickly enough */
     diff = ((2 * delta + 1) * step) >> shift;
+    predictor = c->predictor;
+    if (sign) predictor -= diff;
+    else predictor += diff;
+
+    c->predictor = av_clip_int16(predictor);
+    c->step_index = step_index;
+
+    return (int16_t)c->predictor;
+}
+
+static inline int16_t adpcm_ima_alp_expand_nibble(ADPCMChannelStatus *c, int8_t nibble, int shift)
+{
+    int step_index;
+    int predictor;
+    int sign, delta, diff, step;
+
+    step = ff_adpcm_step_table[c->step_index];
+    step_index = c->step_index + ff_adpcm_index_table[(unsigned)nibble];
+    step_index = av_clip(step_index, 0, 88);
+
+    sign = nibble & 8;
+    delta = nibble & 7;
+    diff = (delta * step) >> shift;
     predictor = c->predictor;
     if (sign) predictor -= diff;
     else predictor += diff;
@@ -665,6 +698,8 @@ static int get_nb_samples(AVCodecContext *avctx, GetByteContext *gb,
     case AV_CODEC_ID_ADPCM_YAMAHA:
     case AV_CODEC_ID_ADPCM_AICA:
     case AV_CODEC_ID_ADPCM_IMA_SSI:
+    case AV_CODEC_ID_ADPCM_IMA_APM:
+    case AV_CODEC_ID_ADPCM_IMA_ALP:
         nb_samples = buf_size * 2 / ch;
         break;
     }
@@ -1225,6 +1260,26 @@ static int adpcm_decode_frame(AVCodecContext *avctx, void *data,
             int v = bytestream2_get_byteu(&gb);
             *samples++ = adpcm_ima_qt_expand_nibble(&c->status[0],  v >> 4  , 3);
             *samples++ = adpcm_ima_qt_expand_nibble(&c->status[st], v & 0x0F, 3);
+        }
+        break;
+    case AV_CODEC_ID_ADPCM_IMA_APM:
+        for (n = nb_samples / 2; n > 0; n--) {
+            for (channel = 0; channel < avctx->channels; channel++) {
+                int v = bytestream2_get_byteu(&gb);
+                *samples++  = adpcm_ima_qt_expand_nibble(&c->status[channel], v >> 4  , 3);
+                samples[st] = adpcm_ima_qt_expand_nibble(&c->status[channel], v & 0x0F, 3);
+            }
+            samples += avctx->channels;
+        }
+        break;
+    case AV_CODEC_ID_ADPCM_IMA_ALP:
+        for (n = nb_samples / 2; n > 0; n--) {
+            for (channel = 0; channel < avctx->channels; channel++) {
+                int v = bytestream2_get_byteu(&gb);
+                *samples++  = adpcm_ima_alp_expand_nibble(&c->status[channel], v >> 4  , 2);
+                samples[st] = adpcm_ima_alp_expand_nibble(&c->status[channel], v & 0x0F, 2);
+            }
+            samples += avctx->channels;
         }
         break;
     case AV_CODEC_ID_ADPCM_IMA_OKI:
@@ -1843,7 +1898,7 @@ static int adpcm_decode_frame(AVCodecContext *avctx, void *data,
                             scale = sign_extend(byte, 4);
                         }
 
-                        scale  = scale << 12;
+                        scale  = scale * (1 << 12);
                         sample = (int)((scale >> shift) + (c->status[channel].sample1 * xa_adpcm_table[filter][0] + c->status[channel].sample2 * xa_adpcm_table[filter][1]) / 64);
                     }
                     *samples++ = av_clip_int16(sample);
@@ -1965,6 +2020,7 @@ ADPCM_DECODER(AV_CODEC_ID_ADPCM_EA_R3,       sample_fmts_s16p, adpcm_ea_r3,     
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_EA_XAS,      sample_fmts_s16p, adpcm_ea_xas,      "ADPCM Electronic Arts XAS");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_AMV,     sample_fmts_s16,  adpcm_ima_amv,     "ADPCM IMA AMV");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_APC,     sample_fmts_s16,  adpcm_ima_apc,     "ADPCM IMA CRYO APC");
+ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_APM,     sample_fmts_s16,  adpcm_ima_apm,     "ADPCM IMA Ubisoft APM");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_DAT4,    sample_fmts_s16,  adpcm_ima_dat4,    "ADPCM IMA Eurocom DAT4");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_DK3,     sample_fmts_s16,  adpcm_ima_dk3,     "ADPCM IMA Duck DK3");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_DK4,     sample_fmts_s16,  adpcm_ima_dk4,     "ADPCM IMA Duck DK4");
@@ -1976,6 +2032,7 @@ ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_QT,      sample_fmts_s16p, adpcm_ima_qt,    
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_RAD,     sample_fmts_s16,  adpcm_ima_rad,     "ADPCM IMA Radical");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_SSI,     sample_fmts_s16,  adpcm_ima_ssi,     "ADPCM IMA Simon & Schuster Interactive");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_SMJPEG,  sample_fmts_s16,  adpcm_ima_smjpeg,  "ADPCM IMA Loki SDL MJPEG");
+ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_ALP,     sample_fmts_s16,  adpcm_ima_alp,     "ADPCM IMA High Voltage Software ALP");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_WAV,     sample_fmts_s16p, adpcm_ima_wav,     "ADPCM IMA WAV");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_IMA_WS,      sample_fmts_both, adpcm_ima_ws,      "ADPCM IMA Westwood");
 ADPCM_DECODER(AV_CODEC_ID_ADPCM_MS,          sample_fmts_both, adpcm_ms,          "ADPCM Microsoft");
