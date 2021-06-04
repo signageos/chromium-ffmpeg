@@ -297,10 +297,9 @@ static int config_output(AVFilterLink *link)
         goto exit;
     }
 
-    link->time_base.num = ctx->inputs[0]->time_base.num;
-    link->time_base.den = ctx->inputs[0]->time_base.den * 2;
-    link->w             = ctx->inputs[0]->w;
-    link->h             = ctx->inputs[0]->h;
+    link->time_base = av_mul_q(ctx->inputs[0]->time_base, (AVRational){1, 2});
+    link->w         = ctx->inputs[0]->w;
+    link->h         = ctx->inputs[0]->h;
 
     if(y->mode & 1)
         link->frame_rate = av_mul_q(ctx->inputs[0]->frame_rate,
@@ -373,7 +372,7 @@ static const AVFilterPad deint_cuda_outputs[] = {
     { NULL }
 };
 
-AVFilter ff_vf_yadif_cuda = {
+const AVFilter ff_vf_yadif_cuda = {
     .name           = "yadif_cuda",
     .description    = NULL_IF_CONFIG_SMALL("Deinterlace CUDA frames"),
     .priv_size      = sizeof(DeintCUDAContext),
