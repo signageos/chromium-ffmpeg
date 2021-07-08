@@ -25,7 +25,8 @@
  * JPEG-LS encoder.
  */
 
-#define UNCHECKED_BITSTREAM_READER 1
+// Chromium: do not use an unchecked bitstream reader.
+// #define UNCHECKED_BITSTREAM_READER 1
 #include "libavutil/opt.h"
 #include "avcodec.h"
 #include "bytestream.h"

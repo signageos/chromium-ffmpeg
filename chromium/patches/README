@@ -971,27 +971,53 @@ Affects:
     libavcodec/h2645_parse.c
 
 ------------------------------------------------------------------
-commit 45705ea1ee868ee1ebe7f0c0fb68e037c93d021a
+commit 8bc09e53d14bc76f69b7397253f174a4e5431059
 Author: Ted Meyer <tmathmeyer@google.com>
-Date:   Mon May 10 19:17:07 2021 -0700
+Date:   Sat May 15 08:13:34 2021 -0700
 
-    Re-add rotation metadata tag in mov.c
+    Update FFMpeg
 
-    in ffmpeg_common.c in chromium, specifically the
-    AVStreamToVideoDecoderConfig function, there's no way to get the
-    rotation matrix from the AVStream alone. FFMpeg used to set this
-    metadata tag, but it was removed in version 59. This patch just re-adds
-    it so that we don't lose our ability to render rotated videos properly.
+    changes including:
+     - Re-add rotation metadata tag in mov.c - AVStreamToVideoDecoderConfig
+       needs rotation metadata from ffmpeg, since it only has access to the
+       metadata dict, and not to the raw matrix in the private data section.
+     - No more mips on linux
+
+    > git diff origin/master configure | grep '\+.*\[autodetect\]'
+     - no output -
+
+
+    Bug: 1208571
+    Change-Id: I40fe02f1c16de9b76d355f3ad92dd65b02b6c421
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/third_party/ffmpeg/+/2885985
+    Reviewed-by: Frank Liberato <liberato@chromium.org>
+    Reviewed-by: Matthew Wolenetz <wolenetz@chromium.org>
 
 Affects:
     libavformat/mov.c
 
 ------------------------------------------------------------------
-commit aa56606640e56158e412b55eb1bde1b9af5f5770
+commit e058e9eb798cc07b52de90deda4b2d377578a7b8
 Author: Ted Meyer <tmathmeyer@google.com>
-Date:   Fri Jun 4 12:10:16 2021 -0700
+Date:   Fri Jun 4 12:19:40 2021 -0700
 
     Initialize variables to fix compilation warning
 
+    Bug:1208571
+    Change-Id: Id35eee47d18ffcd58293fa2cbd1c8fd9c93ba1a4
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/third_party/ffmpeg/+/2939635
+    Reviewed-by: Frank Liberato <liberato@chromium.org>
+
 Affects:
     libavutil/x86/tx_float_init.c
+
+------------------------------------------------------------------
+commit bab99aeaa95b74391a3c06db97da3d350cb39fe4
+Author: liberato@chromium.org <liberato@chromium.org>
+Date:   Wed Jul 7 17:36:34 2021 -0700
+
+    Removed UNCHECKED_BITSTREAM_READER from jpeglsenc.c
+
+Affects:
+    libavcodec/jpeglsenc.c
+

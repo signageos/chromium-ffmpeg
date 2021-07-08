@@ -121,6 +121,13 @@ int64_t av_stream_get_end_pts(const AVStream *st)
         return AV_NOPTS_VALUE;
 }
 
+// Chromium: We use the internal field first_dts vvv
+int64_t av_stream_get_first_dts(const AVStream *st)
+{
+  return st->internal->first_dts;
+}
+// Chromium: We use the internal field first_dts ^^^
+
 struct AVCodecParserContext *av_stream_get_parser(const AVStream *st)
 {
     return st->internal->parser;
