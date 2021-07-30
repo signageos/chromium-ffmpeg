@@ -26,6 +26,9 @@
  */
 
 #include "libavutil/cpu.h"
+// Chromium change: comment out UNCHECKED_BITSTREAM_READER .
+//#define UNCHECKED_BITSTREAM_READER 1
+
 #include "libavutil/video_enc_params.h"
 
 #include "avcodec.h"
