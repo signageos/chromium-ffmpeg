@@ -96,11 +96,7 @@ def CleanObjectFiles(object_files):
     object_files: List of object files that needs cleaning.
   """
   cleaning_list = [
-      'libavcodec/inverse.o',  # Includes libavutil/inverse.c
       'libavcodec/file_open.o',  # Includes libavutil/file_open.c
-      'libavcodec/log2_tab.o',  # Includes libavutil/log2_tab.c
-      'libavformat/golomb_tab.o',  # Includes libavcodec/golomb.c
-      'libavformat/log2_tab.o',  # Includes libavutil/log2_tab.c
       'libavformat/file_open.o',  # Includes libavutil/file_open.c
 
       # These codecs are not supported by Chromium and allowing ogg to parse

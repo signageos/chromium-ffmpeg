@@ -170,7 +170,7 @@
 %define HAVE_ATOMIC_CAS_PTR 0
 %define HAVE_MACHINE_RW_BARRIER 0
 %define HAVE_MEMORYBARRIER 0
-%define HAVE_MM_EMPTY 1
+%define HAVE_MM_EMPTY 0
 %define HAVE_RDTSC 0
 %define HAVE_SEM_TIMEDWAIT 1
 %define HAVE_SYNC_VAL_COMPARE_AND_SWAP 1
@@ -217,7 +217,7 @@
 %define HAVE_TERMIOS_H 1
 %define HAVE_UDPLITE_H 0
 %define HAVE_UNISTD_H 1
-%define HAVE_VALGRIND_VALGRIND_H 0 ; %define HAVE_VALGRIND_VALGRIND_H 1 -- forced to 0. See https://crbug.com/590440
+%define HAVE_VALGRIND_VALGRIND_H 0 ; %define HAVE_VALGRIND_VALGRIND_H 0 -- forced to 0. See https://crbug.com/590440
 %define HAVE_WINDOWS_H 0
 %define HAVE_WINSOCK2_H 0
 %define HAVE_INTRINSICS_NEON 0
