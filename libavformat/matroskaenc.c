@@ -444,15 +444,25 @@ static void ebml_writer_close_master(EbmlWriter *writer)
     av_assert2(writer->current_master_element < writer->nb_elements);
     elem = &writer->elements[writer->current_master_element];
     av_assert2(elem->type == EBML_MASTER);
+    av_assert2(elem->priv.master.nb_elements < 0); /* means unset */
     elem->priv.master.nb_elements = writer->nb_elements - writer->current_master_element - 1;
+    av_assert2(elem->priv.master.containing_master < 0 ||
+               elem->priv.master.containing_master < writer->current_master_element);
     writer->current_master_element = elem->priv.master.containing_master;
 }
 
 static void ebml_writer_close_or_discard_master(EbmlWriter *writer)
 {
     av_assert2(writer->nb_elements > 0);
+    av_assert2(0 <= writer->current_master_element);
+    av_assert2(writer->current_master_element < writer->nb_elements);
     if (writer->current_master_element == writer->nb_elements - 1) {
+        const EbmlElement *const elem = &writer->elements[writer->nb_elements - 1];
         /* The master element has no children. Discard it. */
+        av_assert2(elem->type == EBML_MASTER);
+        av_assert2(elem->priv.master.containing_master < 0 ||
+                   elem->priv.master.containing_master < writer->current_master_element);
+        writer->current_master_element = elem->priv.master.containing_master;
         writer->nb_elements--;
         return;
     }
@@ -2094,7 +2104,7 @@ static int mkv_write_chapters(AVFormatContext *s)
     create_new_ids = mkv_new_chapter_ids_needed(s);
 
     for (unsigned i = 0; i < s->nb_chapters; i++) {
-        const AVChapter *c   = s->chapters[i];
+        AVChapter *const c   = s->chapters[i];
         int64_t chapterstart = av_rescale_q(c->start, c->time_base, scale);
         int64_t chapterend   = av_rescale_q(c->end,   c->time_base, scale);
         const AVDictionaryEntry *t;
@@ -2122,11 +2132,15 @@ static int mkv_write_chapters(AVFormatContext *s)
         if (ret < 0)
             goto fail;
 
-        if (tags && mkv_check_tag(c->metadata, MATROSKA_ID_TAGTARGETS_CHAPTERUID)) {
-            ret = mkv_write_tag(mkv, c->metadata, tags, NULL,
-                                MATROSKA_ID_TAGTARGETS_CHAPTERUID, uid);
-            if (ret < 0)
-                goto fail;
+        if (tags) {
+            ff_metadata_conv(&c->metadata, ff_mkv_metadata_conv, NULL);
+
+            if (mkv_check_tag(c->metadata, MATROSKA_ID_TAGTARGETS_CHAPTERUID)) {
+                ret = mkv_write_tag(mkv, c->metadata, tags, NULL,
+                                    MATROSKA_ID_TAGTARGETS_CHAPTERUID, uid);
+                if (ret < 0)
+                    goto fail;
+            }
         }
     }
     end_ebml_master(dyn_cp, editionentry);
