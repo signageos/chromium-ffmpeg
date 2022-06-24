@@ -160,6 +160,7 @@ if ((is_android && current_cpu == "arm" && arm_use_neon) || (is_android && curre
     "libavutil/channel_layout.c",
     "libavutil/color_utils.c",
     "libavutil/crc.c",
+    "libavutil/csp.c",
     "libavutil/detection_bbox.c",
     "libavutil/dict.c",
     "libavutil/display.c",
@@ -205,6 +206,7 @@ if ((is_android && current_cpu == "arm" && arm_use_neon) || (is_android && curre
     "libavutil/tx.c",
     "libavutil/tx_double.c",
     "libavutil/tx_int32.c",
+    "libavutil/uuid.c",
     "libavutil/video_enc_params.c",
   ]
 }
