@@ -886,3 +886,16 @@ Date:   Thu May 19 14:16:20 2022 -0700
 Affects:
     libavutil/avsscanf.c
 
+------------------------------------------------------------------
+commit 8d12faf8f791f7655b48641ba47ff1ce9cd0d3f3
+Author: Eugene Zemtsov <eugene@chromium.org>
+Date:   Tue Jul 26 20:00:50 2022 -0700
+
+    Remove forward declaration for enum.
+
+    ISO C forbids forward references to enum types. And this breaks
+    x86 windows build of Chromium.
+
+Affects:
+    libavutil/hwcontext_stub.c
+
