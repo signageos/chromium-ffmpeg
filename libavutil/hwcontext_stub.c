@@ -22,7 +22,9 @@
 #include <stddef.h>
 #include "pixfmt.h"
 
-typedef enum VkFormat VkFormat;
+// ISO C forbids forward references to enum types, this is the next best thing
+// since enum values are never really used.
+typedef enum { NEVER_USED } VkFormat;
 typedef struct AVVkFrame AVVkFrame;
 const VkFormat *av_vkfmt_from_pixfmt(enum AVPixelFormat p);
 AVVkFrame *av_vk_frame_alloc(void);
