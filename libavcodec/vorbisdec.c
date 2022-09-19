@@ -131,6 +131,7 @@ typedef struct vorbis_context_s {
 
     FFTContext mdct[2];
     uint8_t       first_frame;
+    int64_t       initial_pts;
     uint32_t      version;
     uint8_t       audio_channels;
     uint32_t      audio_samplerate;
@@ -1578,30 +1579,6 @@ static inline int vorbis_residue_decode(vorbis_context *vc, vorbis_residue *vr,
     }
 }
 
-void ff_vorbis_inverse_coupling(float *mag, float *ang, intptr_t blocksize)
-{
-    int i;
-    for (i = 0;  i < blocksize;  i++) {
-        if (mag[i] > 0.0) {
-            if (ang[i] > 0.0) {
-                ang[i] = mag[i] - ang[i];
-            } else {
-                float temp = ang[i];
-                ang[i]     = mag[i];
-                mag[i]    += temp;
-            }
-        } else {
-            if (ang[i] > 0.0) {
-                ang[i] += mag[i];
-            } else {
-                float temp = ang[i];
-                ang[i]     = mag[i];
-                mag[i]    -= temp;
-            }
-        }
-    }
-}
-
 // Decode the audio packet using the functions above
 
 static int vorbis_parse_audio_packet(vorbis_context *vc, float **floor_ptr)
@@ -1847,6 +1824,10 @@ static int vorbis_decode_frame(AVCodecContext *avctx, AVFrame *frame,
 
     if (!vc->first_frame) {
         vc->first_frame = 1;
+        vc->initial_pts = frame->pts;
+    }
+
+    if (frame->pts == vc->initial_pts) {
         *got_frame_ptr = 0;
         av_frame_unref(frame);
         return buf_size;
@@ -1881,7 +1862,6 @@ static av_cold void vorbis_decode_flush(AVCodecContext *avctx)
                              sizeof(*vc->saved));
     }
     vc->previous_window = -1;
-    vc->first_frame = 0;
 }
 
 const FFCodec ff_vorbis_decoder = {
