@@ -26,6 +26,7 @@
 #include "avcodec.h"
 #include "codec_internal.h"
 #include "encode.h"
+#include "me_cmp.h"
 #include "packet_internal.h"
 #include "snow_dwt.h"
 #include "snow.h"
@@ -66,6 +67,7 @@ static av_cold int encode_init(AVCodecContext *avctx)
     if ((ret = ff_snow_common_init(avctx)) < 0) {
         return ret;
     }
+    ff_me_cmp_init(&s->mecc, avctx);
     ff_mpegvideoencdsp_init(&s->mpvencdsp, avctx);
 
     ff_snow_alloc_blocks(s);
@@ -1814,7 +1816,7 @@ redo_frame:
             if(s->qlog == LOSSLESS_QLOG){
                 for(y=0; y<h; y++){
                     for(x=0; x<w; x++){
-                        s->spatial_idwt_buffer[y*w + x]<<=FRAC_BITS;
+                        s->spatial_idwt_buffer[y*w + x] *= 1 << FRAC_BITS;
                     }
                 }
             }
