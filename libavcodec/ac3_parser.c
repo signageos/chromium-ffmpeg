@@ -53,6 +53,10 @@ static const uint8_t center_levels[4] = { 4, 5, 6, 5 };
  */
 static const uint8_t surround_levels[4] = { 4, 6, 7, 6 };
 
+/*** Chromium: vvv end #if CONFIG_AC3_PARSER */
+#endif
+/*** Chromium: ^^^ end #if CONFIG_AC3_PARSER */
+
 int ff_ac3_find_syncword(const uint8_t *buf, int buf_size)
 {
     int i;
@@ -72,6 +76,10 @@ int ff_ac3_find_syncword(const uint8_t *buf, int buf_size)
 
     return i;
 }
+
+/*** Chromium: vvv restart #if CONFIG_AC3_PARSER */
+#if CONFIG_AC3_PARSER
+/*** Chromium: ^^^ restart #if CONFIG_AC3_PARSER */
 
 int ff_ac3_parse_header(GetBitContext *gbc, AC3HeaderInfo *hdr)
 {

@@ -327,7 +327,7 @@
 #define HAVE_NANOSLEEP 1
 #define HAVE_PEEKNAMEDPIPE 0
 #define HAVE_POSIX_MEMALIGN 1
-#define HAVE_PRCTL 1
+#define HAVE_PRCTL 0 /* #define HAVE_PRCTL 1 -- forced to 0 for Fuchsia */
 #define HAVE_PTHREAD_CANCEL 1
 #define HAVE_SCHED_GETAFFINITY 1
 #define HAVE_SECITEMIMPORT 0
