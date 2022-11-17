@@ -95,7 +95,6 @@ static int no_file_overwrite  = 0;
 #if FFMPEG_OPT_PSNR
 int do_psnr            = 0;
 #endif
-int input_stream_potentially_available = 0;
 int ignore_unknown_streams = 0;
 int copy_unknown_streams = 0;
 int recast_media = 0;
@@ -165,7 +164,7 @@ static int show_hwaccels(void *optctx, const char *opt, const char *arg)
 }
 
 /* return a copy of the input with the stream specifiers removed from the keys */
-AVDictionary *strip_specifiers(AVDictionary *dict)
+AVDictionary *strip_specifiers(const AVDictionary *dict)
 {
     const AVDictionaryEntry *e = NULL;
     AVDictionary    *ret = NULL;
@@ -202,6 +201,44 @@ int parse_and_set_vsync(const char *arg, int *vsync_var, int file_idx, int st_id
     return 0;
 }
 
+/* Correct input file start times based on enabled streams */
+static void correct_input_start_times(void)
+{
+    for (int i = 0; i < nb_input_files; i++) {
+        InputFile       *ifile = input_files[i];
+        AVFormatContext    *is = ifile->ctx;
+        int64_t new_start_time = INT64_MAX, diff, abs_start_seek;
+
+        ifile->start_time_effective = is->start_time;
+
+        if (is->start_time == AV_NOPTS_VALUE ||
+            !(is->iformat->flags & AVFMT_TS_DISCONT))
+            continue;
+
+        for (int j = 0; j < is->nb_streams; j++) {
+            AVStream *st = is->streams[j];
+            if(st->discard == AVDISCARD_ALL || st->start_time == AV_NOPTS_VALUE)
+                continue;
+            new_start_time = FFMIN(new_start_time, av_rescale_q(st->start_time, st->time_base, AV_TIME_BASE_Q));
+        }
+
+        diff = new_start_time - is->start_time;
+        if (diff) {
+            av_log(NULL, AV_LOG_VERBOSE, "Correcting start time of Input #%d by %"PRId64" us.\n", i, diff);
+            ifile->start_time_effective = new_start_time;
+            if (copy_ts && start_at_zero)
+                ifile->ts_offset = -new_start_time;
+            else if (!copy_ts) {
+                abs_start_seek = is->start_time + (ifile->start_time != AV_NOPTS_VALUE) ? ifile->start_time : 0;
+                ifile->ts_offset = abs_start_seek > new_start_time ? -abs_start_seek : -new_start_time;
+            } else if (copy_ts)
+                ifile->ts_offset = 0;
+
+            ifile->ts_offset += ifile->input_ts_offset;
+        }
+    }
+}
+
 static int apply_sync_offsets(void)
 {
     for (int i = 0; i < nb_input_files; i++) {
@@ -230,9 +267,9 @@ static int apply_sync_offsets(void)
         if (self->ctx->start_time_realtime != AV_NOPTS_VALUE && ref->ctx->start_time_realtime != AV_NOPTS_VALUE) {
             self_start_time = self->ctx->start_time_realtime;
             ref_start_time  =  ref->ctx->start_time_realtime;
-        } else if (self->ctx->start_time != AV_NOPTS_VALUE && ref->ctx->start_time != AV_NOPTS_VALUE) {
-            self_start_time = self->ctx->start_time;
-            ref_start_time  =  ref->ctx->start_time;
+        } else if (self->start_time_effective != AV_NOPTS_VALUE && ref->start_time_effective != AV_NOPTS_VALUE) {
+            self_start_time = self->start_time_effective;
+            ref_start_time  =  ref->start_time_effective;
         } else {
             start_times_set = 0;
         }
@@ -1076,8 +1113,6 @@ static int opt_filter_complex(void *optctx, const char *opt, const char *arg)
     if (!fg->graph_desc)
         return AVERROR(ENOMEM);
 
-    input_stream_potentially_available = 1;
-
     return 0;
 }
 
@@ -1091,8 +1126,6 @@ static int opt_filter_complex_script(void *optctx, const char *opt, const char *
     fg = ALLOC_ARRAY_ELEM(filtergraphs, nb_filtergraphs);
     fg->index      = nb_filtergraphs - 1;
     fg->graph_desc = graph_desc;
-
-    input_stream_potentially_available = 1;
 
     return 0;
 }
@@ -1187,7 +1220,7 @@ static const OptionGroupDef groups[] = {
 };
 
 static int open_files(OptionGroupList *l, const char *inout,
-                      int (*open_file)(OptionsContext*, const char*))
+                      int (*open_file)(const OptionsContext*, const char*))
 {
     int i, ret;
 
@@ -1252,8 +1285,6 @@ int ffmpeg_parse_options(int argc, char **argv)
         goto fail;
     }
 
-    apply_sync_offsets();
-
     /* create the complex filtergraphs */
     ret = init_complex_filters();
     if (ret < 0) {
@@ -1267,6 +1298,10 @@ int ffmpeg_parse_options(int argc, char **argv)
         av_log(NULL, AV_LOG_FATAL, "Error opening output files: ");
         goto fail;
     }
+
+    correct_input_start_times();
+
+    apply_sync_offsets();
 
     check_filter_outputs();
 
