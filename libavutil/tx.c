@@ -340,6 +340,8 @@ static const FFTXCodelet * const * const codelet_list[] = {
     ff_tx_codelet_list_float_c,
     // ff_tx_codelet_list_double_c, // Chromium: save on binary size
     // ff_tx_codelet_list_int32_c,  // Chromium: save on binary size
+    // Removed in commit 6a1468ead6b2b0c611f16ed6c7609eaa30e13d74
+    // https://chromium-review.googlesource.com/c/chromium/third_party/ffmpeg/+/4061169
     ff_tx_null_list,
 #if HAVE_X86ASM
     ff_tx_codelet_list_float_x86,
