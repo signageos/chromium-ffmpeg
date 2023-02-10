@@ -193,7 +193,11 @@ int ff_encode_get_frame(AVCodecContext *avctx, AVFrame *frame)
 int ff_encode_reordered_opaque(AVCodecContext *avctx,
                                AVPacket *pkt, const AVFrame *frame)
 {
+#if FF_API_REORDERED_OPAQUE
+FF_DISABLE_DEPRECATION_WARNINGS
     avctx->reordered_opaque = frame->reordered_opaque;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     if (avctx->flags & AV_CODEC_FLAG_COPY_OPAQUE) {
         int ret = av_buffer_replace(&pkt->opaque_ref, frame->opaque_ref);
@@ -255,10 +259,9 @@ int ff_encode_encode_cb(AVCodecContext *avctx, AVPacket *avpkt,
 unref:
         av_packet_unref(avpkt);
     }
-#if !FF_API_THREAD_SAFE_CALLBACKS
+
     if (frame)
         av_frame_unref(frame);
-#endif
 
     return ret;
 }
@@ -299,10 +302,6 @@ static int encode_simple_internal(AVCodecContext *avctx, AVPacket *avpkt)
         ret = ff_thread_video_encode_frame(avctx, avpkt, frame, &got_packet);
     else {
         ret = ff_encode_encode_cb(avctx, avpkt, frame, &got_packet);
-#if FF_API_THREAD_SAFE_CALLBACKS
-        if (frame)
-            av_frame_unref(frame);
-#endif
     }
 
     if (avci->draining && !got_packet)

@@ -707,6 +707,7 @@ library:
     @tab Audio format used in Sony PS games.
 @item Marble WADY               @tab   @tab X
 @item WAV                       @tab X @tab X
+@item Waveform Archiver         @tab   @tab X
 @item WavPack                   @tab X @tab X
 @item WebM                      @tab X @tab X
 @item Windows Televison (WTV)   @tab X @tab X
@@ -1356,6 +1357,7 @@ following image formats are supported:
 @item Vorbis                 @tab  E  @tab  X
     @tab A native but very primitive encoder exists.
 @item Voxware MetaSound      @tab     @tab  X
+@item Waveform Archiver      @tab     @tab  X
 @item WavPack                @tab  X  @tab  X
 @item Westwood Audio (SND1)  @tab     @tab  X
 @item Windows Media Audio 1  @tab  X  @tab  X
