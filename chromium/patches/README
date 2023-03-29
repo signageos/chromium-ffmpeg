@@ -934,11 +934,19 @@ Affects:
     libavutil/tx.c
 
 ------------------------------------------------------------------
-commit 3f8962d6a886250b42da5ae5123a3bc33e8434ea
+commit 346d30b3f6631f2d47fa310f7dfeb78215706fc3
 Author: Frank Liberato <liberato@chromium.org>
-Date:   Mon Feb 13 23:59:05 2023 +0000
+Date:   Tue Feb 14 00:04:02 2023 +0000
 
-    Undeprecate `reordered_opaque`.
+    FFmpeg roll with new ios configs
+
+    As part of this, undeprecate `reordered_opaque` with a patch on
+    the chromium side, due to unrelated upstream changes.
+
+    Bug: 1414135
+    Change-Id: Ia2a3f25f7672452ae5a0b15ca0450f67c119eee1
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/third_party/ffmpeg/+/4246712
+    Reviewed-by: Dale Curtis <dalecurtis@chromium.org>
 
 Affects:
     libavcodec/avcodec.h
