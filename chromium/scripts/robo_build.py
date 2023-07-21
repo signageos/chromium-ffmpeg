@@ -67,11 +67,11 @@ def ImportFFmpegConfigsIntoChromium(robo_configuration, write_git_file = False):
   copy_cmd = robo_configuration.get_script_path("copy_config.sh")
   if robo_configuration.Call([copy_cmd]):
     raise Exception("FFmpeg copy_config.sh failed")
-  
+
   # TODO... seems like there are some auto-generated files that generate_gn.py
   # throws a nasty license check on, incorrectly. maybe they should be deleted
   shell.log("Generating GN config for all ffmpeg versions")
-  generate_cmd = robo_configuration.get_script_path("generate_gn.py")
+  generate_cmd = [robo_configuration.get_script_path("generate_gn.py")]
   if write_git_file:
     generate_cmd += ["-i", robo_configuration.autorename_git_file()]
   if robo_configuration.Call(generate_cmd):
