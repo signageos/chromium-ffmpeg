@@ -31,11 +31,8 @@
 #include "libavutil/common.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
-#include "libavutil/imgutils.h"
 #include "avfilter.h"
-#include "formats.h"
 #include "internal.h"
-#include "video.h"
 #include "bwdif.h"
 
 /*
@@ -322,8 +319,6 @@ static void filter(AVFilterContext *ctx, AVFrame *dstpic,
     if (yadif->current_field == YADIF_FIELD_END) {
         yadif->current_field = YADIF_FIELD_NORMAL;
     }
-
-    emms_c();
 }
 
 static av_cold void uninit(AVFilterContext *ctx)

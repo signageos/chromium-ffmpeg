@@ -1,6 +1,5 @@
 /*
- * Jpeg XL header verification
- * Copyright (c) 2022 Leo Izen <leo.izen@gmail.com>
+ * Copyright © 2023 Rémi Denis-Courmont.
  *
  * This file is part of FFmpeg.
  *
@@ -19,19 +18,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVFORMAT_JPEGXL_PROBE_H
-#define AVFORMAT_JPEGXL_PROBE_H
+#include "config.h"
 
 #include <stdint.h>
 
-#define FF_JPEGXL_CODESTREAM_SIGNATURE_LE 0x0aff
-#define FF_JPEGXL_CONTAINER_SIGNATURE_LE 0x204c584a0c000000
+#include "libavutil/attributes.h"
+#include "libavutil/cpu.h"
+#include "libavutil/riscv/cpu.h"
+#include "libavcodec/g722dsp.h"
 
-/**
- * @brief verify that a codestream header is valid
- * @return Negative upon error, 0 upon verifying that the codestream is not animated,
- *         and 1 upon verifying that it is animated
- */
-int ff_jpegxl_verify_codestream_header(const uint8_t *buf, int buflen, int validate_level);
+extern void ff_g722_apply_qmf_rvv(const int16_t *prev_samples, int xout[2]);
 
-#endif /* AVFORMAT_JPEGXL_PROBE_H */
+av_cold void ff_g722dsp_init_riscv(G722DSPContext *dsp)
+{
+#if HAVE_RVV
+    int flags = av_get_cpu_flags();
+
+    if ((flags & AV_CPU_FLAG_RVV_I32) && ff_get_rv_vlenb() >= 16)
+        dsp->apply_qmf = ff_g722_apply_qmf_rvv;
+#endif
+}

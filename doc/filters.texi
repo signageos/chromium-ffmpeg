@@ -1459,6 +1459,14 @@ select logistic sigmoid
 select sine cardinal function
 @item isinc
 select inverted sine cardinal function
+@item quat
+select quartic
+@item quatr
+select quartic root
+@item qsin2
+select squared quarter of sine wave
+@item hsin2
+select squared half of sine wave
 @item nofade
 no fade applied
 @end table
@@ -2836,6 +2844,13 @@ Default value is 8.
 
 This filter supports the all above options as @ref{commands}.
 
+@section apsnr
+Measure Audio Peak Signal-to-Noise Ratio.
+
+This filter takes two audio streams for input, and outputs first
+audio stream.
+Results are in dB per channel at end of either input.
+
 @section apsyclip
 Apply Psychoacoustic clipper to input audio stream.
 
@@ -3133,6 +3148,13 @@ audio, the data is treated as if all the planes were concatenated.
 @item plane_checksums
 A list of Adler-32 checksums for each data plane.
 @end table
+
+@section asisdr
+Measure Audio Scaled-Invariant Signal-to-Distortion Ratio.
+
+This filter takes two audio streams for input, and outputs first
+audio stream.
+Results are in dB per channel at end of either input.
 
 @section asoftclip
 Apply audio soft clipping.
@@ -16298,6 +16320,16 @@ Render frames with rounded corners. The value, given as a float ranging from
 square to fully circular. In other words, it gives the radius divided by half
 the smaller side length. Defaults to @code{0.0}.
 
+@item extra_opts
+Pass extra libplacebo internal configuration options. These can be specified
+as a list of @var{key}=@var{value} pairs separated by ':'. The following example
+shows how to configure a custom filter kernel ("EWA LanczosSharp") and use it
+to double the input image resolution:
+
+@example
+-vf "libplacebo=w=iw*2:h=ih*2:extra_opts='upscaler=custom\:upscaler_preset=ewa_lanczos\:upscaler_blur=0.9812505644269356'"
+@end example
+
 @item colorspace
 @item color_primaries
 @item color_trc
@@ -21183,6 +21215,27 @@ Scale a logo to 1/10th the height of a video, while preserving its display aspec
 [logo-in][video-in]scale2ref_npp=w=oh*mdar:h=ih/10[logo-out][video-out]
 @end example
 @end itemize
+
+@section scale_vt
+
+Scale and convert the color parameters using VTPixelTransferSession.
+
+The filter accepts the following options:
+@table @option
+@item w
+@item h
+Set the output video dimension expression. Default value is the input dimension.
+
+@item color_matrix
+Set the output colorspace matrix.
+
+@item color_primaries
+Set the output color primaries.
+
+@item color_transfer
+Set the output transfer characteristics.
+
+@end table
 
 @section scharr
 Apply scharr operator to input video stream.
@@ -27649,6 +27702,54 @@ Default value is @code{0}.
 
 @end table
 
+@section transpose_vt
+
+Transpose rows with columns in the input video and optionally flip it.
+For more in depth examples see the @ref{transpose} video filter, which shares mostly the same options.
+
+It accepts the following parameters:
+
+@table @option
+
+@item dir
+Specify the transposition direction.
+
+Can assume the following values:
+@table @samp
+@item cclock_flip
+Rotate by 90 degrees counterclockwise and vertically flip. (default)
+
+@item clock
+Rotate by 90 degrees clockwise.
+
+@item cclock
+Rotate by 90 degrees counterclockwise.
+
+@item clock_flip
+Rotate by 90 degrees clockwise and vertically flip.
+
+@item hflip
+Flip the input video horizontally.
+
+@item vflip
+Flip the input video vertically.
+
+@end table
+
+@item passthrough
+Do not apply the transposition if the input geometry matches the one
+specified by the specified value. It accepts the following values:
+@table @samp
+@item none
+Always apply transposition. (default)
+@item portrait
+Preserve portrait geometry (when @var{height} >= @var{width}).
+@item landscape
+Preserve landscape geometry (when @var{width} >= @var{height}).
+@end table
+
+@end table
+
 @section transpose_vulkan
 
 Transpose rows with columns in the input video and optionally flip it.
@@ -30714,7 +30815,7 @@ Set the frequency scale used. Allowed values are:
 
 @table @option
 @item linear
-@item log2
+@item log
 @item bark
 @item mel
 @item erbs
@@ -30723,6 +30824,18 @@ Set the frequency scale used. Allowed values are:
 @item qdrt
 @end table
 Default value is @code{linear}.
+
+@item iscale
+Set the intensity scale used. Allowed values are:
+
+@table @option
+@item linear
+@item log
+@item sqrt
+@item cbrt
+@item qdrt
+@end table
+Default value is @code{log}.
 
 @item min
 Set the minimum frequency that will be used in output.
@@ -30733,6 +30846,12 @@ Set the maximum frequency that will be used in output.
 Default is @code{20000} Hz. The real frequency upper limit
 depends on input audio's sample rate and such will be enforced
 on this value when it is set to value greater than Nyquist frequency.
+
+@item imin
+Set the minimum intensity that will be used in output.
+
+@item imax
+Set the maximum intensity that will be used in output.
 
 @item logb
 Set the logarithmic basis for brightness strength when
