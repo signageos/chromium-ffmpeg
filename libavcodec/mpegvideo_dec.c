@@ -25,6 +25,7 @@
 #include "config_components.h"
 
 #include "libavutil/avassert.h"
+#include "libavutil/emms.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/internal.h"
 #include "libavutil/video_enc_params.h"
@@ -36,6 +37,7 @@
 #include "mpegvideo.h"
 #include "mpegvideodec.h"
 #include "mpeg4videodec.h"
+#include "thread.h"
 #include "threadframe.h"
 #include "wmv2dec.h"
 
@@ -154,21 +156,16 @@ do {\
     s->divx_packed  = s1->divx_packed;
 
     if (s1->bitstream_buffer) {
-        if (s1->bitstream_buffer_size +
-            AV_INPUT_BUFFER_PADDING_SIZE > s->allocated_bitstream_buffer_size) {
-            av_fast_malloc(&s->bitstream_buffer,
-                           &s->allocated_bitstream_buffer_size,
-                           s1->allocated_bitstream_buffer_size);
-            if (!s->bitstream_buffer) {
-                s->bitstream_buffer_size = 0;
-                return AVERROR(ENOMEM);
-            }
+        av_fast_padded_malloc(&s->bitstream_buffer,
+                              &s->allocated_bitstream_buffer_size,
+                              s1->bitstream_buffer_size);
+        if (!s->bitstream_buffer) {
+            s->bitstream_buffer_size = 0;
+            return AVERROR(ENOMEM);
         }
         s->bitstream_buffer_size = s1->bitstream_buffer_size;
         memcpy(s->bitstream_buffer, s1->bitstream_buffer,
                s1->bitstream_buffer_size);
-        memset(s->bitstream_buffer + s->bitstream_buffer_size, 0,
-               AV_INPUT_BUFFER_PADDING_SIZE);
     }
 
     // linesize-dependent scratch buffer allocation
@@ -438,10 +435,6 @@ FF_ENABLE_DEPRECATION_WARNINGS
         ff_thread_report_progress(&s->next_picture_ptr->tf, INT_MAX, 1);
     }
 
-#if 0 // BUFREF-FIXME
-    memset(s->last_picture.f->data, 0, sizeof(s->last_picture.f->data));
-    memset(s->next_picture.f->data, 0, sizeof(s->next_picture.f->data));
-#endif
     if (s->last_picture_ptr) {
         if (s->last_picture_ptr->f->buf[0] &&
             (ret = ff_mpeg_ref_picture(s->avctx, &s->last_picture,
