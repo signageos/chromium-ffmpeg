@@ -43,7 +43,10 @@
 #include "libavutil/hdr_dynamic_metadata.h"
 #include "libavutil/intfloat.h"
 #include "libavutil/intreadwrite.h"
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_LZO
 #include "libavutil/lzo.h"
+#endif
 #include "libavutil/mastering_display_metadata.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
@@ -67,7 +70,10 @@
 #include "oggdec.h"
 /* For ff_codec_get_id(). */
 #include "riff.h"
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_SIPR_DECODER
 #include "rmsipr.h"
+#endif
 
 #if CONFIG_BZLIB
 #include <bzlib.h>
@@ -1701,6 +1707,8 @@ static int matroska_decode_buffer(uint8_t **buf, int *buf_size,
         memcpy(pkt_data + header_size, data, isize);
         break;
     }
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_LZO
     case MATROSKA_TRACK_ENCODING_COMP_LZO:
         do {
             int insize = isize;
@@ -1720,6 +1728,7 @@ static int matroska_decode_buffer(uint8_t **buf, int *buf_size,
         }
         pkt_size -= olen;
         break;
+#endif
 #if CONFIG_ZLIB
     case MATROSKA_TRACK_ENCODING_COMP_ZLIB:
     {
@@ -2064,7 +2073,10 @@ static int matroska_parse_content_encodings(MatroskaTrackEncoding *encodings,
 #if CONFIG_BZLIB
             encodings->compression.algo != MATROSKA_TRACK_ENCODING_COMP_BZLIB &&
 #endif
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_LZO
             encodings->compression.algo != MATROSKA_TRACK_ENCODING_COMP_LZO   &&
+#endif
             encodings->compression.algo != MATROSKA_TRACK_ENCODING_COMP_HEADERSTRIP) {
         encodings->scope = 0;
         av_log(logctx, AV_LOG_ERROR, "Unsupported encoding type");
@@ -2763,11 +2775,16 @@ static int mka_parse_audio_codec(MatroskaTrack *track, AVCodecParameters *par,
             track->codec_priv.size = 0;
         } else {
             if (par->codec_id == AV_CODEC_ID_SIPR) {
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_SIPR_DECODER
                 static const int sipr_bit_rate[4] = { 6504, 8496, 5000, 16000 };
                 if (flavor > 3)
                     return AVERROR_INVALIDDATA;
                 track->audio.sub_packet_size = ff_sipr_subpk_size[flavor];
                 par->bit_rate          = sipr_bit_rate[flavor];
+#else
+                return AVERROR_INVALIDDATA;
+#endif
             } else if (track->audio.sub_packet_size <= 0 ||
                         track->audio.frame_size % track->audio.sub_packet_size)
                 return AVERROR_INVALIDDATA;
@@ -3554,12 +3571,17 @@ static int matroska_parse_rm_audio(MatroskaDemuxContext *matroska,
                 memcpy(track->audio.buf + x * 2 * w + y * cfs,
                        data + x * cfs, cfs);
         } else if (st->codecpar->codec_id == AV_CODEC_ID_SIPR) {
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_SIPR_DECODER
             if (size < w) {
                 av_log(matroska->ctx, AV_LOG_ERROR,
                        "Corrupt sipr RM-style audio packet size\n");
                 return AVERROR_INVALIDDATA;
             }
             memcpy(track->audio.buf + y * w, data, w);
+#else
+            return AVERROR_INVALIDDATA;
+#endif
         } else {
             if (size < w) {
                 av_log(matroska->ctx, AV_LOG_ERROR,
@@ -3573,8 +3595,14 @@ static int matroska_parse_rm_audio(MatroskaDemuxContext *matroska,
         }
 
         if (++track->audio.sub_packet_cnt >= h) {
-            if (st->codecpar->codec_id == AV_CODEC_ID_SIPR)
+            if (st->codecpar->codec_id == AV_CODEC_ID_SIPR) {
+// Chromium: Continue to disable LZO and SIPR. crbug.com/1293918
+#if CONFIG_SIPR_DECODER
                 ff_rm_reorder_sipr_data(track->audio.buf, h, w);
+#else
+                return AVERROR_INVALIDDATA;
+#endif
+            }
             track->audio.sub_packet_cnt = 0;
             track->audio.pkt_cnt        = h * w / a;
         }
@@ -4194,7 +4222,10 @@ static int matroska_parse_cluster(MatroskaDemuxContext *matroska)
     MatroskaBlock     *block = &cluster->block;
     int res;
 
-    av_assert0(matroska->num_levels <= 2);
+// Chromium: Fail with an error rather than assert. crbug.com/995706
+//  av_assert0(matroska->num_levels <= 2);
+    if (matroska->num_levels > 2)
+      return AVERROR_INVALIDDATA;
 
     if (matroska->num_levels == 1) {
         res = ebml_parse(matroska, matroska_segment, NULL);
