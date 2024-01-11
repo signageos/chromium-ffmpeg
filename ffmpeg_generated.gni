@@ -1,4 +1,4 @@
-# Copyright 2023 The Chromium Authors. All rights reserved.
+# Copyright 2024 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -171,6 +171,7 @@ if ((is_android && current_cpu == "arm" && arm_use_neon) || (is_android && curre
     "libavutil/hdr_dynamic_vivid_metadata.c",
     "libavutil/hwcontext.c",
     "libavutil/hwcontext_stub.c",
+    "libavutil/iamf.c",
     "libavutil/integer.c",
     "libavutil/intmath.c",
     "libavutil/lfg.c",
