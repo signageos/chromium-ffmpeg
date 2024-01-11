@@ -133,7 +133,7 @@ static const char *optional_device_exts[] = {
     "VK_MESA_video_decode_av1",
 };
 
-static inline int enable_debug(AVDictionary *opt)
+static inline int enable_debug(const AVDictionary *opt)
 {
     AVDictionaryEntry *entry = av_dict_get(opt, "debug", NULL, 0);
     int debug = entry && strtol(entry->value, NULL, 10);
@@ -765,7 +765,6 @@ static void destroy(VkRenderer *renderer)
 
 static const AVClass vulkan_renderer_class = {
         .class_name = "Vulkan Renderer",
-        .item_name  = av_default_item_name,
         .version    = LIBAVUTIL_VERSION_INT,
 };
 
