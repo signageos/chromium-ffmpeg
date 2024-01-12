@@ -9264,7 +9264,7 @@ static int64_t mov_get_skip_samples(AVStream *st, int sample)
         return 0;
 
     /* compute skip samples according to stream start_pad, seek ts and first ts */
-    off = av_rescale_q(ts - first_ts, st->time_base,
+    off = av_rescale_q(av_sat_sub64(ts, first_ts), st->time_base,
                        (AVRational){1, st->codecpar->sample_rate});
     return FFMAX(sc->start_pad - off, 0);
 }
