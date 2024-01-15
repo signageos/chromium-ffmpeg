@@ -2,6 +2,8 @@
 """
 
 import os
+import platform
+import re
 from . import shell
 from . import packages
 from . import errors
@@ -147,18 +149,44 @@ class RoboConfiguration:
 
   def EnsureHostInfo(self):
     """Ensure that the host architecture and platform are set."""
-    kernel, host, os, *rest = shell.output_or_error(["uname", "-a"]).split()
-    assert kernel in ("Linux", "linux")
-    assert "x86_64" in rest
-    self._host_operating_system = "linux"
-    self._host_architecture = "x64"
 
-    if "rodete" in os:
-      self._os_flavor = packages.OsFlavor.Debian
-    elif "arch" in os:
-      self._os_flavor = packages.OsFlavor.Arch
+    if re.match(r"i.86", platform.machine()):
+      self._host_architecture = "ia32"
+    elif platform.machine() == "x86_64" or platform.machine() == "AMD64":
+      self._host_architecture = "x64"
+    elif platform.machine() == "aarch64":
+      self._host_architecture = "arm64"
+    elif platform.machine() == "mips32":
+      self._host_architecture = "mipsel"
+    elif platform.machine() == "mips64":
+      self._host_architecture = "mips64el"
+    elif platform.machine().startswith("arm"):
+      self._host_architecture = "arm"
     else:
-      raise Exception("Couldn't determine OS flavor (needed to install packages)")
+      raise ValueError(f"Unrecognized CPU architecture: {platform.machine()}")
+
+    if platform.system() == "Linux":
+      self._host_operating_system = "linux"
+
+      try:
+        with open("/etc/lsb-release", "r") as f:
+          result = f.read()
+          if "Ubuntu" in result or "Debian" in result:
+            self._os_flavor = packages.OsFlavor.Debian
+          elif "Arch" in result:
+            self._os_flavor = packages.OsFlavor.Arch
+          else:
+            raise Exception("Couldn't determine OS flavor from lsb-release "
+                            "(needed to install packages)")
+      except:
+        raise Exception("Couldn't read OS flavor from /etc/lsb-release file "
+                        "(needed to install packages)")
+    elif platform.system() == "Darwin":
+      self._host_operating_system = "mac"
+    elif platform.system() == "Windows" or "CYGWIN_NT" in platform.system():
+      self._host_operating_system = "win"
+    else:
+      raise ValueError(f"Unsupported platform: {platform.system()}")
 
   def EnsureChromeSrc(self):
     """Find the /absolute/path/to/my_chrome_dir/src"""
