@@ -599,6 +599,8 @@ def ConfigureAndBuild(target_arch, target_os, host_os, host_arch, parallel_jobs,
       '--enable-decoder=pcm_s16be,pcm_s24be,pcm_mulaw,pcm_alaw',
       '--enable-demuxer=ogg,matroska,wav,flac,mp3,mov',
       '--enable-parser=opus,vorbis,flac,mpegaudio,vp9',
+      '--enable-parser=h264',
+      '--enable-decoder=h264',
 
       # Setup include path so Chromium's libopus can be used.
       '--extra-cflags=-I' + os.path.join(CHROMIUM_ROOT_DIR,
